@@ -18,18 +18,6 @@
       </header> -->
       <div class="container">
         <nav>
-          <p>
-            <label for="input_dirName">폴더명:</label>
-            <input
-              id="input_dirName"
-              type="text"
-              placeholder="파일이 저장될 폴더명을 입력해주세요."
-              value="xlsx"
-              autofocus
-              required
-              onkeypress="onPress()"
-            />
-          </p>
           <div
             id="btnRunning"
             class="btn btn_primary"
@@ -38,6 +26,22 @@
           >
             실행
           </div>
+          <!-- <div
+            id="btnRunning"
+            class="btn btn_danger"
+            title="이 버튼을 눌러 실행하세요."
+            onclick="cancel(this)"
+          >
+            실행취소
+          </div> -->
+          <div
+            class="btn btn_info"
+            onclick="openFolder()"
+            title="파일이 저장될 폴더를 선택해주세요"
+          >
+            폴더 선택
+          </div>
+          <input id="input_dirPath" type="text" disabled />
           <!-- <div class="btn btn_info" onclick="openFolder(this)">폴더열기</div>
           <div
             id="btnOpenfile"
@@ -46,26 +50,25 @@
           >
             최근파일열기
           </div> -->
-          <div
+          <!-- <div
             id="btnCancel"
             class="btn btn_danger disabled"
             onclick="cancel(this)"
           >
             실행취소
-          </div>
+          </div> -->
           <!-- <div class="btn btn_primary" onclick="toggleCancel()">CANCEL</div> -->
-
-          <div class="state">
-            <div class="stick"></div>
-            <div class="stick"></div>
-            <div class="stick"></div>
-            <div class="stick"></div>
-            <div class="stick"></div>
-            <div class="stick"></div>
-
-            <b>불러오는 중입니다...</b>
-          </div>
         </nav>
+        <div class="state">
+          <div class="stick"></div>
+          <div class="stick"></div>
+          <div class="stick"></div>
+          <div class="stick"></div>
+          <div class="stick"></div>
+          <div class="stick"></div>
+
+          <b>불러오는 중입니다...</b>
+        </div>
         <main>
           <table>
             <thead>

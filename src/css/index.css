@@ -201,20 +201,11 @@ table {
   justify-content: space-around;
 }
 nav {
+  display: flex;
   padding: 10px 0;
 }
-nav > p {
-  display: flex;
-  margin: 0.5em 0;
-}
-nav > p > label {
-  display: inline-block;
-  align-self: center;
-}
-nav > p > input {
-  flex: 1 1 auto;
-  margin-left: 10px;
-  border-bottom: 1.5px solid transparent;
+nav > .btn {
+  margin-right: 10px;
 }
 input:focus {
   transition: all 0.5s linear;
@@ -225,7 +216,7 @@ nav input {
   font-size: 1.3em;
   font-weight: 700;
 }
-nav.loading > .state > b {
+.loading > .state > b {
   display: inline;
   text-transform: uppercase;
   font-size: 1em;
@@ -236,11 +227,11 @@ nav.loading > .state > b {
   -webkit-animation: fade 2s infinite;
   -moz-animation: fade 2s infinite;
 }
-nav > .state > .stick,
-nav > .state > b {
+.state > .stick,
+.state > b {
   display: none;
 }
-nav.loading > .state > .stick {
+.loading > .state > .stick {
   display: inline-block;
   width: 30px;
   height: 3px;
@@ -248,7 +239,7 @@ nav.loading > .state > .stick {
   margin-left: -8px;
 }
 
-nav.loading > .state > .stick:nth-child(n) {
+.loading > .state > .stick:nth-child(n) {
   transform: rotate(30deg);
   -ms-transform: rotate(30deg); /* IE 9 */
   -webkit-transform: rotate(30deg); /* Safari and Chrome */
@@ -256,7 +247,7 @@ nav.loading > .state > .stick:nth-child(n) {
   -webkit-animation: fall 2s infinite;
   -moz-animation: fall 2s infinite;
 }
-nav.loading > .state > .stick:nth-child(2n) {
+.loading > .state > .stick:nth-child(2n) {
   transform: rotate(-30deg);
   -ms-transform: rotate(-30deg); /* IE 9 */
   -webkit-transform: rotate(-30deg); /* Safari and Chrome */
@@ -369,7 +360,7 @@ nav.loading > .state > .stick:nth-child(2n) {
 }
 .btn_primary:hover,
 .btn_primary:focus {
-  background-color: #268fff;
+  background-color: #0268d4;
 }
 .btn_info {
   background-color: #949494;

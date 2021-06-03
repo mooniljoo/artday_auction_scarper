@@ -11,18 +11,10 @@ let toggleCancel = true;
 function setLoading() {
   document.querySelector("nav").classList.add("loading");
   document.getElementById("btnRunning").classList.add("disabled");
-  document.getElementById("btnCancel").classList.remove("disabled");
-  document.getElementById("input_dirName").setAttribute("disabled", "disabled");
-  document.getElementById("input_dirName").classList.add("disabled");
-  // document.getElementById("btnOpenfile").classList.add("disabled");
 }
 function unsetLoading() {
   document.querySelector("nav").classList.remove("loading");
   document.getElementById("btnRunning").classList.remove("disabled");
-  document.getElementById("btnCancel").classList.add("disabled");
-  document.getElementById("input_dirName").removeAttribute("disabled");
-  document.getElementById("input_dirName").classList.remove("disabled");
-  // document.getElementById("btnOpenfile").classList.remove("disabled");
 }
 function openDialogMsg(msg) {
   ipcRenderer.sendSync("openDialogMsg", msg);
@@ -163,13 +155,27 @@ async function configureBrowser() {
 }
 async function scraper(url) {
   setLoading();
-  while (1) {
-    //ready for browser
-    const result = [];
-    const browser = await configureBrowser();
+  //ready for browser
+  const result = [];
+  const browser = await configureBrowser();
+  while (toggleCancel) {
     const page = await browser.newPage();
     //access the website
     await page.goto(url, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+
+    // auction has opened or not
+    await page.hover(".pc-nav");
+    await page.waitForTimeout(3000);
+    let closedButton = await page.$(
+      "a[href=\"javascript:alert('준비중입니다.');\"]"
+    );
+    if (closedButton != null) {
+      openDialogMsg("경매가 준비중입니다.");
+      browser.close();
+      unsetLoading();
+      return;
+    }
 
     // DEPTH 1 : pagination
     let pageIndex = 1;
@@ -199,38 +205,42 @@ async function scraper(url) {
       paginateButton[pageIndex].click();
 
       if (pageIndex == paginateButton.length - 1) pageIndex = 0;
-      console.log(11, toggleCancel);
-      if (!toggleCancel) {
-        browser.close();
-        unsetLoading();
-        return;
-      }
       pageIndex++;
     }
-    console.log(22, toggleCancel);
-    console.log(`All Loops are over.`);
-    browser.close();
-    unsetLoading();
-    return result;
   }
+  console.log(`All Loops are over.`);
+  browser.close();
+  unsetLoading();
+  return result;
 }
 function onSubmit(el) {
   if (el.classList.contains("disabled")) return false;
 
-  console.log(toggleCancel);
   let url = "http://www.artday.co.kr/pages/auction/online-auction.php";
-  dirName = document.getElementById("input_dirName").value;
-  if (dirName) createFolder(dirName);
+  input_dirPath = document.getElementById("input_dirPath");
+  dirPath = input_dirPath.value;
+  if (dirPath == "") {
+    alert("파일이 저장될 폴더를 선택해주세요.");
+    input_dirPath.focus();
+    return;
+  }
   scraper(url).then((res) => {
-    if (toggleCancel) {
-      let resp = String(ipcRenderer.sendSync("create_xlsx", res, dirName));
-      console.log(resp);
-    }
+    console.log(res);
+    toggleCancel = true;
+    if (res == undefined) return;
+    if (res.length == 0) return;
+    if (dirPath) createFolder(dirPath);
+
+    let resp = String(ipcRenderer.sendSync("create_xlsx", res, dirPath));
+    console.log(resp);
   });
   // .catch((error) => {
   //   console.error(error);
   //   // openDialogError(error);
   // });
-  toggleCancel = true;
-  console.log(toggleCancel);
+}
+function openFolder() {
+  let resp = ipcRenderer.sendSync("openDialogFile");
+  console.log(resp);
+  document.getElementById("input_dirPath").value = resp.filePaths[0];
 }
