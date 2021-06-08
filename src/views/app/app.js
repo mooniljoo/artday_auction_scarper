@@ -1,123 +1,277 @@
 const { ipcRenderer } = require("electron");
 const puppeteer = require("puppeteer");
-// // const shell = require("electron").shell;
-// const Store = require("electron-store");
-const fs = require("fs");
+const rootPath = require("electron-root-path").rootPath;
+const shell = require("electron").shell;
 
-// store = new Store();
+let boolRunning = true;
 
-let toggleCancel = true;
+document.addEventListener("DOMContentLoaded", (event) => {
+  console.log("Scraper DOM fully loaded");
+  document.getElementById("input_dirPath").value = rootPath;
+});
 
-function setLoading() {
-  document.querySelector("nav").classList.add("loading");
-  document.getElementById("btnRunning").classList.add("disabled");
-}
-function unsetLoading() {
-  document.querySelector("nav").classList.remove("loading");
-  document.getElementById("btnRunning").classList.remove("disabled");
-}
 function openDialogMsg(msg) {
   ipcRenderer.sendSync("openDialogMsg", msg);
 }
 function openDialogError(msg) {
   ipcRenderer.sendSync("openDialogError", msg);
 }
+function setLoading() {
+  document.getElementById("stateMsg").innerText = "불러오는 중입니다...";
+  document.querySelector(".state").classList.add("on");
+  document.getElementById("btnRunning").classList.add("disabled");
+  document.getElementById("btnSelectDirPath").classList.add("disabled");
+  document.getElementById("btnOpenDir").classList.add("disabled");
+  document.getElementById("btnCancel").classList.remove("disabled");
+  document.getElementById("btnCancel").classList.remove("disabled");
+  // let = allCheckbox = document.querySelectorAll(
+  //   "#wrapper_checkbox input[type=checkbox]"
+  // );
+  // for (let i = 0; i < allCheckbox.length; i++) {
+  //   allCheckbox[i].setAttribute("disabled", "disabled");
+  // }
+}
+function unsetLoading() {
+  document.querySelector(".state").classList.remove("on");
+  document.getElementById("btnRunning").classList.remove("disabled");
+  document.getElementById("btnSelectDirPath").classList.remove("disabled");
+  document.getElementById("btnOpenDir").classList.remove("disabled");
+  document.getElementById("btnCancel").classList.add("disabled");
+  // let = allCheckbox = document.querySelectorAll(
+  //   "#wrapper_checkbox input[type=checkbox]"
+  // );
+  // for (let i = 0; i < allCheckbox.length; i++) {
+  //   allCheckbox[i].removeAttribute("disabled");
+  // }
+}
 
-function cancel(el) {
-  if (el.classList.contains("disabled")) {
-    console.log("This button is disabled.");
+function openDir(el) {
+  //check this element is disabled or not
+  if (el.classList.contains("disabled")) return;
+  let dirPath = document.getElementById("input_dirPath").value;
+  console.log("open the folder", dirPath);
+  shell.openExternal(dirPath);
+}
+
+function onCancel(el) {
+  //check this element is disabled or not
+  if (el.classList.contains("disabled")) return;
+  // show msg to screen for user
+  document.getElementById("stateMsg").innerText = "취소중입니다...";
+  boolRunning = false;
+}
+
+function openDialogFile(el) {
+  //check this element is disabled or not
+  if (el.classList.contains("disabled")) return;
+  // send to Main Process
+  let resp = ipcRenderer.sendSync("openDialogFile", rootPath);
+  // recv to Main Process
+  if (resp.filePaths[0] != undefined)
+    document.getElementById("input_dirPath").value = resp.filePaths[0];
+}
+
+async function configureBrowser() {
+  const browser = await puppeteer.launch({
+    devtools: false,
+    headless: true,
+    defaultViewport: null,
+    args: ["--window-size=1280,1080"],
+  });
+  return browser;
+}
+// function getArrAuction() {
+//   allCheckbox = document.querySelectorAll(
+//     "#wrapper_checkbox input[type=checkbox]"
+//   );
+//   let arrAuction = [];
+
+//   for (let i = 0; i < allCheckbox.length; i++) {
+//     if (allCheckbox[i].checked) {
+//       arrAuction.push(allCheckbox[i].value);
+//     }
+//   }
+//   if (arrAuction.length == 0) {
+//     let msg = "적어도 경매를 하나는 선택해야 합니다.";
+//     console.log(msg);
+//     openDialogMsg(msg);
+//     return null;
+//   }
+//   return arrAuction;
+// }
+
+async function scraper(url) {
+  // set loading state
+  setLoading();
+  // init variables
+  // const arrAuction = getArrAuction();
+  const arrAuction = ["main"];
+  const arrClosedAuction = [];
+  const arrOpenedAuction = [];
+  const arrSuccessfulAuctionsSaved = [];
+  const arrFailedAuctionsSaved = [];
+  // check for auctions to scrape
+  if (arrAuction == null) return false;
+  // console.log(`"${arrAuction}" auction IS SELECTED.`);
+
+  // ready for browser
+  const browser = await configureBrowser();
+  const page = await browser.newPage();
+  //access the website
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+
+  ///////////////// LOOPS /////////////////
+  console.log("BROWSER IS READY. LOOPS ARE ABOUT TO START!");
+  //DEPTH 1 : auction
+  let auctionIndex = 0;
+  let auctionCount = arrAuction.length;
+  while (boolRunning) {
+    // if (arrAuction[auctionIndex] == undefined) break;
+    /////////// auction ////////////
+    // await page.waitForSelector(".top_nav", { timeout: 9000 });
+    //access the nav
+    await page.hover(".pc-nav");
+    await page.waitForTimeout(1000);
+    // // select the auction
+    // console.log(
+    //   `TRY TO "${arrAuction[auctionIndex]} auction" SCRAPING. TRY TO GET ELEMENT FOR ACCESS AUCTION PAGE`
+    // );
+    // let selector_auction;
+    // if (arrAuction[auctionIndex] == "major") {
+    //   selector_auction = ".top_nav .Major-on > a";
+    // } else if (arrAuction[auctionIndex] == "premium") {
+    //   selector_auction = ".top_nav .Premium-on > a";
+    // } else if (arrAuction[auctionIndex] == "weekly") {
+    //   selector_auction = ".top_nav .Weekly-on > a";
+    // } else {
+    //   console.error(
+    //     `웹사이트의 구조가 바뀌었거나 선택하여 불러오려고 하는 옥션의 설정값(${arrAuction[auctionIndex]})이 시스템에 저장되어 있지 않습니다.`
+    //   );
+    //   break;
+    // }
+
+    const button_auction = await page.$(
+      "a[href=\"javascript:alert('준비중입니다.');\"]"
+    );
+    if (button_auction != null) {
+      console.log("auction is not open");
+    } else {
+      // arrOpenedAuction.push(arrAuction[auctionIndex]);
+      //init auctionResult
+      let auctionResult = [];
+      // acess the auction
+      console.log("ELEMENT TO ACCESS AUCTION CLICK!");
+      button_auction.click();
+      //DEPTH 2 : pagination
+      let pageIndex = 1;
+      while (1) {
+        await page.waitForTimeout(1000);
+        await page.waitForSelector(".auction-table", { timeout: 9000 });
+
+        let paginateButton = await page.$$("ul.pagination > li > a");
+        let bool_isNextButtonDisabled = await page.$eval(
+          "ul.pagination > li.active",
+          (el) => {
+            return el.nextElementSibling.classList.contains("disabled");
+          }
+        );
+        //check if paginate button is disabled
+        console.log(
+          `bool_isNextButtonDisabled is ${bool_isNextButtonDisabled}`
+        );
+        if (bool_isNextButtonDisabled) break;
+
+        //parsing
+        let innerDesc = await parsing(page);
+        drawTableforDesc(innerDesc);
+        auctionResult.push(...innerDesc);
+        console.log(`Page ${pageIndex} has completed.`);
+
+        //access to new paginate page
+        console.log(pageIndex);
+        paginateButton[pageIndex].click();
+
+        if (pageIndex == paginateButton.length - 1) pageIndex = 0;
+        pageIndex++;
+      }
+
+      console.log(`${auctionResult.length}개의 작품이 파싱되었습니다.`);
+      // get directory path to save
+      let dirPath = document.getElementById("input_dirPath").value;
+      console.log(dirPath);
+      if (auctionResult.length != 0) {
+        // send to Main Process
+        let resp = String(
+          ipcRenderer.sendSync("createXlsxFile", auctionResult, dirPath)
+        );
+        // resc to Main Process
+        if (!resp.includes("Error")) {
+          //success
+          arrSuccessfulAuctionsSaved.push(resp);
+        } else {
+          //fail
+          arrFailedAuctionsSaved.push(resp);
+        }
+      }
+    }
+    break;
+    // auctionIndex++;
+  }
+  console.log(
+    "ALL LOOPS ARE OVER. A SCRAPER IS ABOUT TO TRY TO TERMINATE THE BROWSER."
+  );
+  ///////////////// LOOPS /////////////////
+
+  // terminate browser
+  browser.close();
+  // unset loading state
+  unsetLoading();
+  //return result
+  if (boolRunning) {
+    return {
+      arrOpenedAuction: arrOpenedAuction,
+      arrClosedAuction: arrClosedAuction,
+      arrSuccessfulAuctionsSaved: arrSuccessfulAuctionsSaved,
+      arrFailedAuctionsSaved: arrFailedAuctionsSaved,
+    };
   } else {
-    console.log("Press the Cancel");
-    toggleCancel = false;
-    openDialogMsg("취소되었습니다.");
+    //init toggleCancel
+    boolRunning = true;
+    return null;
   }
 }
-function createFolder(dirName) {
-  !fs.existsSync(dirName) && fs.mkdirSync(dirName);
-}
-async function parsing(page) {
-  console.log("parsing start");
-  let description = await page.evaluate(() => {
-    let q = [];
-    let ls = document.querySelectorAll(".auction-table > tbody > tr");
-    let source = document.querySelector("title")?.innerText;
-    let auctionTitle = document.querySelector(".auc-top-title")?.innerText;
-    let transactDate = document
-      .querySelector(".auction-info > p:nth-child(2)")
-      ?.innerText.split("부터")[0]
-      .split("경매마감")[1];
-    ls.forEach((item) => {
-      const number = item?.querySelectorAll("td")[0]?.innerText;
-      const artist = item
-        ?.querySelectorAll("td")[2]
-        ?.querySelectorAll("p")[0]?.innerText;
-      const title = item
-        ?.querySelectorAll("td")[3]
-        ?.querySelectorAll("p")[0]?.innerText;
-      const size = item
-        ?.querySelectorAll("td")[3]
-        ?.querySelectorAll("p")[1]?.innerText;
-      const materialEdition = item
-        ?.querySelectorAll("td")[3]
-        ?.querySelectorAll("p")[2]?.innerText;
-      const material = materialEdition?.split("(")[0];
-      const edition = materialEdition?.split("(")[1]
-        ? " (" + materialEdition?.split("(")[1]
-        : "";
-      const sizeEdition = size + edition;
-      const year = item
-        ?.querySelectorAll("td")[3]
-        ?.querySelectorAll("p")[3]?.innerText;
-      const estimate = item
-        ?.querySelectorAll("td")[5]
-        ?.querySelectorAll("p")[0]
-        ?.innerText.replace(/\s/g, "");
-
-      let estimateMin = estimate?.split("~")[0];
-      let estimateMax = estimate?.split("~")[1];
-
-      let artistKr = artist?.replace(/[^ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g, "").trim();
-      let artistEn = artist?.replace(/[^a-zA-z\s]/g, "").trim();
-
-      let titleKr = title?.replace(/[a-zA-z\s]/g, "").trim();
-      let titleEn = title?.replace(/[^a-zA-z\s]/g, "").trim();
-
-      let materialKr = material?.replace(/[a-zA-z\s]/g, "").trim();
-      let materialEn = material?.replace(/[^a-zA-z\s]/g, "").trim();
-
-      let certi = "";
-      let signPosition = "";
-      let winningBidUnit = "";
-      let winningBid = "";
-      let estimateUnit = "";
-
-      q.push({
-        number,
-        artistKr,
-        artistEn,
-        titleKr,
-        titleEn,
-        year,
-        certi,
-        sizeEdition,
-        materialKr,
-        materialEn,
-        signPosition,
-        source,
-        auctionTitle,
-        transactDate,
-        winningBidUnit,
-        winningBid,
-        estimateUnit,
-        estimateMin,
-        estimateMax,
-      });
+function onRunning(el) {
+  //check this element is disabled or not
+  if (el.classList.contains("disabled")) return;
+  console.log("RUN!");
+  //init url
+  let url = "http://www.artday.co.kr/pages/auction/online-auction.php";
+  // run scrpaer
+  scraper(url)
+    .then((res) => {
+      console.log(`↓ SCRAPER RESULT ↓\n${res}`);
+      //write message for user
+      let msg = "";
+      if (res == null) {
+        msg = `취소되었습니다🔙`;
+      } else if (res.arrOpenedAuction.length == 0) {
+        msg = `\n열려있는 경매가 없습니다😊`;
+      } else {
+        if (res.arrSuccessfulAuctionsSaved.length != 0) {
+          msg += `${res.arrSuccessfulAuctionsSaved} 저장이 완료되었습니다😁`;
+        } else {
+          msg = `ERROR: scraper 결과를 분석할수 없습니다🤦‍♂ \n${res}`;
+        }
+      }
+      //report result for user
+      openDialogMsg(msg);
+    })
+    .catch((err) => {
+      openDialogError(err);
     });
-    return q;
-  });
-  return description;
 }
-function display_table(arr) {
+
+function drawTableforDesc(arr) {
   const tbody = document.getElementById("tbody");
   arr.forEach((item) => {
     tbody.innerHTML += `
@@ -145,102 +299,115 @@ function display_table(arr) {
 `;
   });
 }
-async function configureBrowser() {
-  const browser = await puppeteer.launch({
-    headless: false,
-    defaultViewport: null,
-    args: ["--window-size=1280,1080"],
-  });
-  return browser;
-}
-async function scraper(url) {
-  setLoading();
-  //ready for browser
-  const result = [];
-  const browser = await configureBrowser();
-  while (toggleCancel) {
-    const page = await browser.newPage();
-    //access the website
-    await page.goto(url, { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(2000);
 
-    // auction has opened or not
-    await page.hover(".pc-nav");
-    await page.waitForTimeout(3000);
-    let closedButton = await page.$(
-      "a[href=\"javascript:alert('준비중입니다.');\"]"
-    );
-    if (closedButton != null) {
-      openDialogMsg("경매가 준비중입니다.");
-      browser.close();
-      unsetLoading();
-      return;
-    }
+async function parsing(page) {
+  try {
+    let desc = await page.evaluate(() => {
+      let source = document.querySelector("title")
+        ? document.querySelector("title").innerText
+        : "";
+      // let auctionTitle = document
+      //   .querySelector(".header-cont > div > p > span")
+      //   .innerText.split(" -")[0];
+      let auctionTitle = document.querySelector(
+        ".header-cont > p > span"
+      )?.innerText;
+      let transactDate = document
+        .querySelector(".header-cont > div > p > span")
+        ?.innerText.split(" ")
+        .slice(0, 3)
+        .join(" ");
+      let number = document
+        .querySelector(".lot-num")
+        ?.innerText.replace(/[^0-9]/g, "");
+      let artist = document
+        .querySelector(".writer")
+        ?.innerHTML.split("<span>")[0]
+        .trim();
+      let title = document.querySelector(".sub-tit")?.innerText;
+      let materialEdition = document
+        .querySelector(".material > p:nth-child(1)")
+        ?.innerText.trim();
 
-    // DEPTH 1 : pagination
-    let pageIndex = 1;
-    while (1) {
-      await page.waitForTimeout(1000);
-      await page.waitForSelector(".auction-table", { timeout: 9000 });
+      let material = materialEdition?.split("(edition")[0];
+      let edition = materialEdition?.includes("edition")
+        ? "(edition" + materialEdition?.split("(edition")[1]
+        : "";
+      let sizeYear = document
+        .querySelector(".material > p:nth-child(2)")
+        ?.innerText.replace(/\s/gi, "");
+      let size = sizeYear?.split("|")[0];
+      let year = sizeYear?.split("|")[1] ? sizeYear?.split("|")[1] : "";
+      let wbPrice = document.querySelector(".wb-price > p:nth-child(1)");
+      let winningBidUnit = wbPrice ? wbPrice.replace(/[^A-Z]/g, "") : "";
+      let winningBid = wbPrice ? wbPrice.replace(/[A-Z]/g, "") : "";
+      let estimate = document
+        .querySelector(".es-price > p:nth-child(1)")
+        ?.innerText.replace(/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣|\s]/g, "");
+      let estimateUnit = estimate?.replace(/[^A-Z]/g, "");
+      let estimateMin = estimate?.replace(/[A-Z]/g, "").split("~")[0];
+      let estimateMax = estimate?.replace(/[A-Z]/g, "").split("~")[1];
+      let stPrice = document
+        .querySelector(".es-price > p:nth-child(2)")
+        ?.innerText.replace(/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣|\s]/g, "");
+      let signPosition = document
+        .querySelector(".cont")
+        ?.innerText.split("\n")
+        .filter((item) => item.includes("signed"))
+        .join("\n");
+      let sizeEdition = size + " " + edition;
 
-      let paginateButton = await page.$$("ul.pagination > li > a");
-      let bool_isNextButtonDisabled = await page.$eval(
-        "ul.pagination > li.active",
-        (el) => {
-          return el.nextElementSibling.classList.contains("disabled");
-        }
-      );
-      //check if paginate button is disabled
-      console.log(`bool_isNextButtonDisabled is ${bool_isNextButtonDisabled}`);
-      if (bool_isNextButtonDisabled) break;
+      let artistKr = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(artist) ? artist : "";
+      let artistEn = !/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(artist) ? artist : "";
 
-      //parsing
-      let description = await parsing(page);
-      display_table(description);
-      result.push(...description);
-      console.log(`Page ${pageIndex} has completed.`);
+      let titleKr = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(title) ? title : "";
+      let titleEn = !/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(title) ? title : "";
 
-      //access to new paginate page
-      console.log(pageIndex);
-      paginateButton[pageIndex].click();
+      let materialKr = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(material) ? material : "";
+      let materialEn = !/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(material) ? material : "";
 
-      if (pageIndex == paginateButton.length - 1) pageIndex = 0;
-      pageIndex++;
-    }
+      let certi = "";
+      number == undefined ? "" : number;
+      artistKr == undefined ? "" : artistKr;
+      artistEn == undefined ? "" : artistEn;
+      titleKr == undefined ? "" : titleKr;
+      titleEn == undefined ? "" : titleEn;
+      year == undefined ? "" : year;
+      certi == undefined ? "" : certi;
+      sizeEdition == undefined ? "" : sizeEdition;
+      materialKr == undefined ? "" : materialKr;
+      materialEn == undefined ? "" : materialEn;
+      signPosition == undefined ? "" : signPosition;
+      source == undefined ? "" : source;
+      auctionTitle == undefined ? "" : auctionTitle;
+      transactDate == undefined ? "" : transactDate;
+      estimateUnit == undefined ? "" : estimateUnit;
+      estimateMin == undefined ? "" : estimateMin;
+      estimateMax == undefined ? "" : estimateMax;
+      return {
+        number,
+        artistKr,
+        artistEn,
+        titleKr,
+        titleEn,
+        year,
+        certi,
+        sizeEdition,
+        materialKr,
+        materialEn,
+        signPosition,
+        source,
+        auctionTitle,
+        transactDate,
+        estimateUnit,
+        estimateMin,
+        estimateMax,
+      };
+    });
+    console.log("description", desc);
+    return desc;
+  } catch (e) {
+    console.error("파싱중 오류가 발생헀습니다🤦‍♂️");
+    return null;
   }
-  console.log(`All Loops are over.`);
-  browser.close();
-  unsetLoading();
-  return result;
-}
-function onSubmit(el) {
-  if (el.classList.contains("disabled")) return false;
-
-  let url = "http://www.artday.co.kr/pages/auction/online-auction.php";
-  input_dirPath = document.getElementById("input_dirPath");
-  dirPath = input_dirPath.value;
-  if (dirPath == "") {
-    alert("파일이 저장될 폴더를 선택해주세요.");
-    input_dirPath.focus();
-    return;
-  }
-  scraper(url).then((res) => {
-    console.log(res);
-    toggleCancel = true;
-    if (res == undefined) return;
-    if (res.length == 0) return;
-    if (dirPath) createFolder(dirPath);
-
-    let resp = String(ipcRenderer.sendSync("create_xlsx", res, dirPath));
-    console.log(resp);
-  });
-  // .catch((error) => {
-  //   console.error(error);
-  //   // openDialogError(error);
-  // });
-}
-function openFolder() {
-  let resp = ipcRenderer.sendSync("openDialogFile");
-  console.log(resp);
-  document.getElementById("input_dirPath").value = resp.filePaths[0];
 }
