@@ -287,8 +287,8 @@ function drawTableforDesc(arr) {
             <td>${item.materialKr}</td>
             <td>${item.materialEn}</td>
             <td>${item.signPosition}</td>
-            <td>${item.source}</td>
             <td>${item.auctionTitle}</td>
+            <td>${item.source}</td>
             <td>${item.transactDate}</td>
             <td>${item.winningBidUnit}</td>
             <td>${item.winningBid}</td>
@@ -303,15 +303,13 @@ function drawTableforDesc(arr) {
 async function parsing(page) {
   try {
     let desc = await page.evaluate(() => {
-      let source = document.querySelector("title")
+      let auctionTitle = document.querySelector("title")
         ? document.querySelector("title").innerText
         : "";
       // let auctionTitle = document
       //   .querySelector(".header-cont > div > p > span")
       //   .innerText.split(" -")[0];
-      let auctionTitle = document.querySelector(
-        ".header-cont > p > span"
-      )?.innerText;
+      let source = document.querySelector(".header-cont > p > span")?.innerText;
       let transactDate = document
         .querySelector(".header-cont > div > p > span")
         ?.innerText.split(" ")
@@ -367,23 +365,23 @@ async function parsing(page) {
       let materialEn = !/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(material) ? material : "";
 
       let certi = "";
-      number == undefined ? "" : number;
-      artistKr == undefined ? "" : artistKr;
-      artistEn == undefined ? "" : artistEn;
-      titleKr == undefined ? "" : titleKr;
-      titleEn == undefined ? "" : titleEn;
-      year == undefined ? "" : year;
-      certi == undefined ? "" : certi;
-      sizeEdition == undefined ? "" : sizeEdition;
-      materialKr == undefined ? "" : materialKr;
-      materialEn == undefined ? "" : materialEn;
-      signPosition == undefined ? "" : signPosition;
-      source == undefined ? "" : source;
-      auctionTitle == undefined ? "" : auctionTitle;
-      transactDate == undefined ? "" : transactDate;
-      estimateUnit == undefined ? "" : estimateUnit;
-      estimateMin == undefined ? "" : estimateMin;
-      estimateMax == undefined ? "" : estimateMax;
+      number = number == undefined ? "" : number;
+      artistKr = artistKr == undefined ? "" : artistKr;
+      artistEn = artistEn == undefined ? "" : artistEn;
+      titleKr = titleKr == undefined ? "" : titleKr;
+      titleEn = titleEn == undefined ? "" : titleEn;
+      year = year == undefined ? "" : year;
+      certi = certi == undefined ? "" : certi;
+      sizeEdition = sizeEdition == undefined ? "" : sizeEdition;
+      materialKr = materialKr == undefined ? "" : materialKr;
+      materialEn = materialEn == undefined ? "" : materialEn;
+      signPosition = signPosition == undefined ? "" : signPosition;
+      source = source == undefined ? "" : source;
+      auctionTitle = auctionTitle == undefined ? "" : auctionTitle;
+      transactDate = transactDate == undefined ? "" : transactDate;
+      estimateUnit = estimateUnit == undefined ? "" : estimateUnit;
+      estimateMin = estimateMin == undefined ? "" : estimateMin;
+      estimateMax = estimateMax == undefined ? "" : estimateMax;
       return {
         number,
         artistKr,
